@@ -69,8 +69,8 @@ WITH (lists = 100);
 ## Build Order
 
 1. **Postgres + pgvector setup** ✅ done
-2. **Crawler + chunker** — crawl4ai → markdown chunks
-3. **Embed + store** — embed chunks, insert into pgvector, verify with raw similarity query
+2. **Crawler + chunker** ✅ done — crawl4ai, sitemap for docs, pagination for community
+3. **Embed + store** ✅ done — OpenAI text-embedding-3-small, batch embedding pipeline
 4. **Basic agent** — embed question → retrieve top-k → call Claude API → return answer
 5. **MCP server** — wrap agent as Claude Code tool
 6. **Elvis / Telegram** — query from phone while at client
@@ -81,8 +81,10 @@ WITH (lists = 100);
 - [x] Postgres + pgvector extension installed and verified
 - [x] Database + chunks table created
 - [ ] OpenAI API key configured
+- [x] Crawler + chunker built (docs sitemap + community pagination)
+- [x] Embeddings pipeline built
 - [ ] First crawl run (Thinkwise docs)
-- [ ] Embeddings pipeline working
+- [ ] First crawl run (community forum)
 - [ ] Basic agent query working end-to-end
 - [ ] MCP server running
 - [ ] Elvis bot connected
