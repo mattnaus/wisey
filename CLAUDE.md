@@ -84,7 +84,7 @@ WITH (lists = 100);
 - [x] Crawler + chunker built (docs sitemap + community pagination)
 - [x] Embeddings pipeline built
 - [x] First crawl run (Thinkwise docs) — 241 pages → 3172 chunks
-- [ ] First crawl run (community forum) — in progress
+- [ ] First crawl run (community forum) — crawler works, IP rate-limited by CloudFront WAF, retry later
 - [x] Basic agent query working end-to-end
 - [x] MCP server running
 - [ ] Elvis bot connected

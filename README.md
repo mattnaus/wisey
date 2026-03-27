@@ -141,7 +141,7 @@ wisey/
 - [x] Crawler + chunker built (docs + community)
 - [x] Embeddings pipeline built
 - [x] First full crawl run (docs) -- 241 pages, 3172 chunks
-- [ ] First full crawl run (community) -- in progress
+- [ ] First full crawl run (community) -- crawler works, temporarily rate-limited
 - [x] Basic agent query working end-to-end
 - [x] MCP server
 - [ ] Telegram bot (Elvis)
