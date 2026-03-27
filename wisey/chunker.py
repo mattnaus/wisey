@@ -71,22 +71,46 @@ def _overlap_parts(parts: list[str], target: int) -> tuple[list[str], int]:
 
 
 def _split_long_paragraph(text: str, target: int) -> list[str]:
-    """Split a long paragraph into sentence-based chunks."""
+    """Split a long paragraph into smaller chunks.
+
+    Tries splitting by newlines first (handles tables and lists),
+    then falls back to sentence boundaries, then hard splits by tokens.
+    """
     import re
+
+    # First try splitting by newlines (covers tables, lists, etc.)
+    lines = [line for line in text.split("\n") if line.strip()]
+    if len(lines) > 1:
+        return _assemble_lines(lines, target, sep="\n")
+
+    # Then try sentence boundaries
     sentences = re.split(r'(?<=[.!?])\s+', text)
+    if len(sentences) > 1:
+        return _assemble_lines(sentences, target, sep=" ")
+
+    # Last resort: hard split by token count
+    tokens = ENCODER.encode(text)
+    chunks = []
+    for i in range(0, len(tokens), target):
+        chunks.append(ENCODER.decode(tokens[i : i + target]))
+    return chunks
+
+
+def _assemble_lines(lines: list[str], target: int, sep: str) -> list[str]:
+    """Group lines into chunks that fit within target tokens."""
     chunks: list[str] = []
     current: list[str] = []
     current_tokens = 0
 
-    for sentence in sentences:
-        st = count_tokens(sentence)
-        if current_tokens + st > target and current:
-            chunks.append(" ".join(current))
+    for line in lines:
+        lt = count_tokens(line)
+        if current_tokens + lt > target and current:
+            chunks.append(sep.join(current))
             current = []
             current_tokens = 0
-        current.append(sentence)
-        current_tokens += st
+        current.append(line)
+        current_tokens += lt
 
     if current:
-        chunks.append(" ".join(current))
+        chunks.append(sep.join(current))
     return chunks
