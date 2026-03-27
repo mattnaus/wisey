@@ -40,8 +40,16 @@ async def discover_topic_urls() -> list[str]:
     """Paginate through all category pages and extract topic URLs."""
     topic_urls: set[str] = set()
 
-    browser_config = BrowserConfig(headless=True, browser_type="chromium")
-    config = CrawlerRunConfig(word_count_threshold=0)
+    browser_config = BrowserConfig(
+        headless=True,
+        browser_type="chromium",
+        use_managed_browser=True,
+    )
+    config = CrawlerRunConfig(
+        word_count_threshold=0,
+        page_timeout=30000,
+        wait_until="domcontentloaded",
+    )
 
     async with AsyncWebCrawler(config=browser_config) as crawler:
         for category in CATEGORIES:
@@ -74,6 +82,7 @@ async def discover_topic_urls() -> list[str]:
                         topic_urls.update(new_urls)
 
                     page += 1
+                    await asyncio.sleep(1)  # polite delay between pages
                 except Exception as e:
                     print(f"[community] Error on {url}: {e}")
                     break
@@ -92,10 +101,16 @@ async def crawl_community(urls: list[str] | None = None) -> list[dict]:
     print(f"[community] Crawling {len(urls)} topics...")
 
     results = []
-    browser_config = BrowserConfig(headless=True, browser_type="chromium")
+    browser_config = BrowserConfig(
+        headless=True,
+        browser_type="chromium",
+        use_managed_browser=True,
+    )
     config = CrawlerRunConfig(
         word_count_threshold=10,
         excluded_tags=["nav", "footer", "header", "aside"],
+        page_timeout=30000,
+        wait_until="domcontentloaded",
     )
 
     async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -104,6 +119,7 @@ async def crawl_community(urls: list[str] | None = None) -> list[dict]:
                 result = await crawler.arun(url=url, config=config)
                 if not result.success:
                     print(f"[community] Failed: {url}")
+                    await asyncio.sleep(2)  # back off on failure
                     continue
 
                 md_result = result.markdown
@@ -127,6 +143,8 @@ async def crawl_community(urls: list[str] | None = None) -> list[dict]:
 
                 if (i + 1) % 100 == 0:
                     print(f"[community] Progress: {i + 1}/{len(urls)}")
+
+                await asyncio.sleep(0.5)  # polite delay
 
             except Exception as e:
                 print(f"[community] Failed to crawl {url}: {e}")
