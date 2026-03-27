@@ -7,25 +7,16 @@ then crawl each topic page for content.
 import asyncio
 import re
 
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
 from wisey.clean import clean_markdown
 
 BASE_URL = "https://community.thinkwisesoftware.com"
 
-# All top-level categories — we paginate through each to discover topic URLs
+# Categories with substantial topic content — ordered largest first
 CATEGORIES = [
-    "/questions-conversations-78",
-    "/ideas-68",
-    "/knowledge-base-69",
-    "/announcements-70",
-    "/events-71",
-    "/academy-77",
-    "/getting-started-on-the-thinkwise-community-72",
-    "/thinkwise-insights-74",
-    "/thinkwise-platform-77",
-    "/thinkstore-87",
-    "/news-blogs-21",
+    "/questions-conversations-78",  # ~3,200 topics
+    "/thinkwise-platform-77",       # ~1,800 topics
 ]
 
 
@@ -33,23 +24,26 @@ def _extract_topic_urls_from_html(html: str) -> set[str]:
     """Extract topic URLs from embedded JSON in inSided HTML."""
     import html as html_mod
     unescaped = html_mod.unescape(html)
-    # Topic URLs appear as escaped JSON: https:\/\/community...\/category-id\/topic-slug-id
+    # Match topic URLs with any combination of escaped/unescaped slashes
     raw_matches = re.findall(
-        r'https?:\\?/\\?/community\.thinkwisesoftware\.com\\?/[a-z0-9-]+-\d+\\?/[a-z0-9-]+-\d+',
+        r'community\.thinkwisesoftware\.com[/\\]+[a-z0-9-]+-\d+[/\\]+[a-z0-9-]+-\d+',
         unescaped,
     )
-    return {m.replace("\\/", "/").replace("\\", "") for m in raw_matches}
+    urls = set()
+    for m in raw_matches:
+        clean = re.sub(r'[/\\]+', '/', m)
+        urls.add(f"https://{clean}")
+    return urls
 
 
 async def discover_topic_urls() -> list[str]:
     """Paginate through all category pages and extract topic URLs."""
     topic_urls: set[str] = set()
 
-    config = CrawlerRunConfig(
-        word_count_threshold=0,
-    )
+    browser_config = BrowserConfig(headless=True, browser_type="chromium")
+    config = CrawlerRunConfig(word_count_threshold=0)
 
-    async with AsyncWebCrawler() as crawler:
+    async with AsyncWebCrawler(config=browser_config) as crawler:
         for category in CATEGORIES:
             page = 1
             empty_streak = 0
@@ -98,12 +92,13 @@ async def crawl_community(urls: list[str] | None = None) -> list[dict]:
     print(f"[community] Crawling {len(urls)} topics...")
 
     results = []
+    browser_config = BrowserConfig(headless=True, browser_type="chromium")
     config = CrawlerRunConfig(
         word_count_threshold=10,
         excluded_tags=["nav", "footer", "header", "aside"],
     )
 
-    async with AsyncWebCrawler() as crawler:
+    async with AsyncWebCrawler(config=browser_config) as crawler:
         for i, url in enumerate(urls):
             try:
                 result = await crawler.arun(url=url, config=config)
