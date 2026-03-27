@@ -2085,7 +2085,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "crawl4ai" },
     { name = "httpx" },
-    { name = "openai" },
     { name = "psycopg2-binary" },
     { name = "tiktoken" },
 ]
@@ -2094,7 +2093,6 @@ dependencies = [
 requires-dist = [
     { name = "crawl4ai", specifier = ">=0.8.6" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "openai", specifier = ">=2.30.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]

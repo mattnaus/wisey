@@ -7,7 +7,7 @@ RAG-based agent that answers Thinkwise platform questions by searching a local v
 | Layer | Choice | Notes |
 |---|---|---|
 | Vector DB | Postgres + pgvector | Self-hosted on Mac Mini |
-| Embeddings | OpenAI text-embedding-3-small | 1536 dimensions |
+| Embeddings | Ollama nomic-embed-text | 768 dimensions, runs locally |
 | LLM | Claude Sonnet (Anthropic API) | Via API at query time |
 | Crawler | crawl4ai | Python, handles JS-rendered pages |
 | Interfaces | MCP server, Telegram bot (Elvis), Web UI | Build in this order |
@@ -24,7 +24,7 @@ DATA SOURCES
 INGESTION PIPELINE
   ├── Crawler (crawl4ai, weekly cron)
   ├── Chunker (~512 tokens, 50-token overlap, preserve headings)
-  └── Embedder (text-embedding-3-small)
+  └── Embedder (nomic-embed-text via Ollama)
         ↓
 STORAGE
   └── pgvector (Postgres) — chunks table (see schema below)
@@ -54,7 +54,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE chunks (
     id          SERIAL PRIMARY KEY,
     content     TEXT NOT NULL,
-    embedding   vector(1536),
+    embedding   vector(768),
     source_url  TEXT,
     source_type TEXT,   -- 'docs' | 'community' | 'release_notes' | 'notes'
     title       TEXT,
@@ -80,7 +80,7 @@ WITH (lists = 100);
 
 - [x] Postgres + pgvector extension installed and verified
 - [x] Database + chunks table created
-- [ ] OpenAI API key configured
+- [x] Ollama + nomic-embed-text installed (replaces OpenAI embeddings)
 - [x] Crawler + chunker built (docs sitemap + community pagination)
 - [x] Embeddings pipeline built
 - [ ] First crawl run (Thinkwise docs)

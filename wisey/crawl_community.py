@@ -13,7 +13,7 @@ from wisey.clean import clean_markdown
 
 BASE_URL = "https://community.thinkwisesoftware.com"
 
-# Top-level categories from the sitemap — we paginate through these
+# All top-level categories — we paginate through each to discover topic URLs
 CATEGORIES = [
     "/questions-conversations-78",
     "/ideas-68",
@@ -21,6 +21,11 @@ CATEGORIES = [
     "/announcements-70",
     "/events-71",
     "/academy-77",
+    "/getting-started-on-the-thinkwise-community-72",
+    "/thinkwise-insights-74",
+    "/thinkwise-platform-77",
+    "/thinkstore-87",
+    "/news-blogs-21",
 ]
 
 

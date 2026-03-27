@@ -7,7 +7,7 @@ RAG-based agent that answers Thinkwise platform questions by searching a local v
 | Layer | Tech | Notes |
 |---|---|---|
 | Vector DB | PostgreSQL 17 + pgvector 0.8 | Self-hosted on Mac Mini (M1) |
-| Embeddings | OpenAI `text-embedding-3-small` | 1536 dimensions |
+| Embeddings | Ollama `nomic-embed-text` | 768 dimensions, runs locally |
 | LLM | Claude Sonnet (Anthropic API) | Grounded answers with citations |
 | Crawler | crawl4ai 0.8 | Python, handles JS-rendered pages |
 | Interfaces | MCP server, Telegram bot (Elvis), Web UI | In build order |
@@ -47,7 +47,7 @@ DATA SOURCES                      RUNTIME
 - PostgreSQL 17 (`brew install postgresql@17`)
 - pgvector (`brew install pgvector`)
 - Python 3.13+ with [uv](https://docs.astral.sh/uv/)
-- OpenAI API key (for embeddings)
+- Ollama (`brew install ollama`) with `nomic-embed-text` model
 - Anthropic API key (for Claude at query time)
 
 ## Setup

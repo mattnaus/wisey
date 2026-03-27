@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE chunks (
     id          SERIAL PRIMARY KEY,
     content     TEXT NOT NULL,
-    embedding   vector(1536),
+    embedding   vector(768),
     source_url  TEXT,
     source_type TEXT,   -- 'docs' | 'community' | 'release_notes' | 'notes'
     title       TEXT,

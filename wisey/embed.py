@@ -1,28 +1,25 @@
-"""Embed text chunks using OpenAI text-embedding-3-small."""
+"""Embed text chunks using Ollama with nomic-embed-text (768 dimensions)."""
 
-import os
-from openai import OpenAI
+import httpx
 
-MODEL = "text-embedding-3-small"
-BATCH_SIZE = 100  # OpenAI supports up to 2048 inputs per request
-
-
-def get_client() -> OpenAI:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable is required")
-    return OpenAI(api_key=api_key)
+OLLAMA_URL = "http://localhost:11434/api/embed"
+MODEL = "nomic-embed-text"
+BATCH_SIZE = 50  # Ollama handles batches via the input list
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed a list of texts, batching as needed. Returns list of 1536-dim vectors."""
-    client = get_client()
+    """Embed a list of texts via Ollama. Returns list of 768-dim vectors."""
     all_embeddings: list[list[float]] = []
 
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i : i + BATCH_SIZE]
-        response = client.embeddings.create(model=MODEL, input=batch)
-        batch_embeddings = [item.embedding for item in response.data]
+        response = httpx.post(
+            OLLAMA_URL,
+            json={"model": MODEL, "input": batch},
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        batch_embeddings = response.json()["embeddings"]
         all_embeddings.extend(batch_embeddings)
 
         if (i + BATCH_SIZE) < len(texts):
