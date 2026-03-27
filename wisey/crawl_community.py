@@ -29,13 +29,21 @@ CATEGORIES = [
 ]
 
 
+def _extract_topic_urls_from_html(html: str) -> set[str]:
+    """Extract topic URLs from embedded JSON in inSided HTML."""
+    import html as html_mod
+    unescaped = html_mod.unescape(html)
+    # Topic URLs appear as escaped JSON: https:\/\/community...\/category-id\/topic-slug-id
+    raw_matches = re.findall(
+        r'https?:\\?/\\?/community\.thinkwisesoftware\.com\\?/[a-z0-9-]+-\d+\\?/[a-z0-9-]+-\d+',
+        unescaped,
+    )
+    return {m.replace("\\/", "/").replace("\\", "") for m in raw_matches}
+
+
 async def discover_topic_urls() -> list[str]:
     """Paginate through all category pages and extract topic URLs."""
     topic_urls: set[str] = set()
-    # Pattern to match topic links: /{category-slug}-{id}/{topic-slug}-{id}
-    topic_pattern = re.compile(
-        r'href="(/[a-z0-9-]+-\d+/[a-z0-9-]+-\d+)"', re.IGNORECASE
-    )
 
     config = CrawlerRunConfig(
         word_count_threshold=0,
@@ -60,8 +68,8 @@ async def discover_topic_urls() -> list[str]:
                         break
 
                     html = result.html or ""
-                    found = topic_pattern.findall(html)
-                    new_urls = {f"{BASE_URL}{path}" for path in found} - topic_urls
+                    found = _extract_topic_urls_from_html(html)
+                    new_urls = found - topic_urls
 
                     if not new_urls:
                         empty_streak += 1
