@@ -83,6 +83,35 @@ uv run python -m wisey.ingest all
 uv run python -m wisey.ingest docs --fresh
 ```
 
+## Query
+
+```bash
+# Ask a question (retrieves context + calls Claude)
+uv run python -m wisey.agent "How do I deploy to Azure?"
+
+# Retrieve-only mode (no Claude call, just show matching chunks)
+uv run python -m wisey.agent --retrieve-only "branching in Software Factory"
+```
+
+## MCP Server (Claude Code integration)
+
+Add to `.claude/settings.json` in the project root:
+
+```json
+{
+  "mcpServers": {
+    "wisey": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/wisey", "python", "-m", "wisey.mcp_server"]
+    }
+  }
+}
+```
+
+This exposes two tools in Claude Code:
+- **search_thinkwise** -- AI-generated answer with citations
+- **search_thinkwise_docs** -- raw source chunks for manual inspection
+
 ## Project Structure
 
 ```
@@ -93,8 +122,10 @@ wisey/
     crawl_docs.py         # Docs crawler (sitemap-based)
     crawl_community.py    # Community forum crawler (pagination)
     db.py                 # Postgres/pgvector helpers
-    embed.py              # OpenAI embedding client
+    embed.py              # Ollama embedding client
     ingest.py             # Main pipeline: crawl -> chunk -> embed -> store
+    agent.py              # Query agent: retrieve + Claude answer
+    mcp_server.py         # MCP server for Claude Code integration
   sql/                    # Database migrations
     001_init.sql
   notes/                  # Personal markdown notes
@@ -109,9 +140,9 @@ wisey/
 - [x] Database `thinkwise_agent` created with `chunks` table
 - [x] Crawler + chunker built (docs + community)
 - [x] Embeddings pipeline built
-- [ ] First full crawl run (docs)
-- [ ] First full crawl run (community)
-- [ ] Basic agent query (embed -> retrieve -> Claude -> answer)
-- [ ] MCP server
+- [x] First full crawl run (docs) -- 241 pages, 3172 chunks
+- [ ] First full crawl run (community) -- in progress
+- [x] Basic agent query working end-to-end
+- [x] MCP server
 - [ ] Telegram bot (Elvis)
 - [ ] Web UI

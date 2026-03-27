@@ -6,3 +6,4 @@ __pycache__/
 dist/
 build/
 .crawl4ai/
+.claude/settings.json

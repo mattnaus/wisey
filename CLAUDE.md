@@ -71,8 +71,8 @@ WITH (lists = 100);
 1. **Postgres + pgvector setup** ✅ done
 2. **Crawler + chunker** ✅ done — crawl4ai, sitemap for docs, pagination for community
 3. **Embed + store** ✅ done — OpenAI text-embedding-3-small, batch embedding pipeline
-4. **Basic agent** — embed question → retrieve top-k → call Claude API → return answer
-5. **MCP server** — wrap agent as Claude Code tool
+4. **Basic agent** ✅ done — embed question → retrieve top-k → Claude Sonnet → cited answer
+5. **MCP server** ✅ done — two tools: search_thinkwise (AI answer) + search_thinkwise_docs (raw chunks)
 6. **Elvis / Telegram** — query from phone while at client
 7. **Web UI** — simple internal dev interface
 
@@ -83,10 +83,10 @@ WITH (lists = 100);
 - [x] Ollama + nomic-embed-text installed (replaces OpenAI embeddings)
 - [x] Crawler + chunker built (docs sitemap + community pagination)
 - [x] Embeddings pipeline built
-- [ ] First crawl run (Thinkwise docs)
-- [ ] First crawl run (community forum)
-- [ ] Basic agent query working end-to-end
-- [ ] MCP server running
+- [x] First crawl run (Thinkwise docs) — 241 pages → 3172 chunks
+- [ ] First crawl run (community forum) — in progress
+- [x] Basic agent query working end-to-end
+- [x] MCP server running
 - [ ] Elvis bot connected
 
 ## Personal Notes Strategy

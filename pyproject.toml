@@ -8,6 +8,7 @@ dependencies = [
     "anthropic>=0.86.0",
     "crawl4ai>=0.8.6",
     "httpx>=0.28.1",
+    "mcp>=1.26.0",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.2",
     "tiktoken>=0.12.0",
