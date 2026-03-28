@@ -80,14 +80,14 @@ WITH (lists = 100);
 - [x] Crawler + chunker built (docs sitemap + community httpx pagination)
 - [x] Embeddings pipeline built
 - [x] First crawl run (Thinkwise docs) — 241 pages, 3,172 chunks
-- [ ] First crawl run (community forum) — in progress (~3,300 topics)
+- [x] First crawl run (community forum) — 3,303 topics, 5,735 chunks
 - [x] Basic agent query working end-to-end
 - [x] MCP server running
 - [x] Telegram bot running (launchd: com.wisey.telegram-bot)
 - [x] Notes pipeline (file watcher, /note command, CLI ingest)
 - [x] Notes watcher running (launchd: com.wisey.watch-notes)
 - [x] Cron: docs monthly (1st of month, 3am)
-- [ ] Cron: community weekly (pending first successful crawl)
+- [x] Cron: community weekly (Sundays 3am)
 - [ ] Web UI
 
 ## Personal Notes Strategy

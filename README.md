@@ -95,7 +95,7 @@ uv run python -m wisey.ingest docs --fresh
 
 Cron jobs handle automatic re-ingestion:
 - **Docs**: 1st of every month at 3am (`scripts/ingest-docs.sh`)
-- **Community**: Weekly on Sundays at 3am (`scripts/ingest-community.sh`) -- pending activation
+- **Community**: Weekly on Sundays at 3am (`scripts/ingest-community.sh`)
 - **Notes**: Auto-ingested via file watcher (launchd service)
 
 ## Notes
@@ -197,7 +197,7 @@ wisey/
 - [x] Crawler + chunker built (docs + community)
 - [x] Embeddings pipeline (Ollama nomic-embed-text)
 - [x] First full crawl run (docs) -- 241 pages, 3,172 chunks
-- [ ] First full crawl run (community) -- in progress (~3,300 topics)
+- [x] First full crawl run (community) -- 3,303 topics, 5,735 chunks
 - [x] Basic agent query working end-to-end
 - [x] MCP server
 - [x] Telegram bot
