@@ -1,30 +1,43 @@
 """Crawl Thinkwise community forum (Gainsight inSided platform).
 
 Strategy: paginate through each category listing to collect topic URLs,
-then crawl each topic page for content.
+then fetch each topic page for content. Uses plain HTTP (httpx) since
+the content is server-side rendered — no headless browser needed.
 """
 
 import asyncio
+import html as html_mod
 import re
 
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
+import httpx
+from markdownify import markdownify as md
 
 from wisey.clean import clean_markdown
 
 BASE_URL = "https://community.thinkwisesoftware.com"
 
-# Categories with substantial topic content — ordered largest first
+# Categories with substantial topic content
 CATEGORIES = [
     "/questions-conversations-78",  # ~3,200 topics
     "/thinkwise-platform-77",       # ~1,800 topics
 ]
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+}
+
+# Delay between requests (seconds) — be polite
+REQUEST_DELAY = 1.5
+
 
 def _extract_topic_urls_from_html(html: str) -> set[str]:
     """Extract topic URLs from embedded JSON in inSided HTML."""
-    import html as html_mod
     unescaped = html_mod.unescape(html)
-    # Match topic URLs with any combination of escaped/unescaped slashes
     raw_matches = re.findall(
         r'community\.thinkwisesoftware\.com[/\\]+[a-z0-9-]+-\d+[/\\]+[a-z0-9-]+-\d+',
         unescaped,
@@ -36,22 +49,41 @@ def _extract_topic_urls_from_html(html: str) -> set[str]:
     return urls
 
 
+def _extract_post_content(html: str) -> str:
+    """Extract post content from a community topic page and convert to markdown."""
+    # Posts live in <div class="post__content"> blocks
+    posts = re.findall(
+        r'<div[^>]*class="[^"]*post__content[^"]*"[^>]*>(.*?)</div>',
+        html,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if not posts:
+        # Fallback: try the main content area
+        main = re.search(r'<main[^>]*>(.*?)</main>', html, re.DOTALL)
+        if main:
+            return clean_markdown(md(main.group(1), strip=["img", "script", "style"]))
+        return ""
+
+    parts = [md(post, strip=["img", "script", "style"]).strip() for post in posts]
+    return clean_markdown("\n\n---\n\n".join(p for p in parts if p))
+
+
+def _extract_title(html: str) -> str:
+    """Extract topic title from HTML."""
+    match = re.search(r'<title[^>]*>(.*?)</title>', html, re.DOTALL | re.IGNORECASE)
+    if match:
+        title = html_mod.unescape(match.group(1)).strip()
+        # Remove site suffix
+        title = re.sub(r"\s*[-|].*community.*$", "", title, flags=re.IGNORECASE).strip()
+        return title
+    return ""
+
+
 async def discover_topic_urls() -> list[str]:
     """Paginate through all category pages and extract topic URLs."""
     topic_urls: set[str] = set()
 
-    browser_config = BrowserConfig(
-        headless=True,
-        browser_type="chromium",
-        use_managed_browser=True,
-    )
-    config = CrawlerRunConfig(
-        word_count_threshold=0,
-        page_timeout=30000,
-        wait_until="domcontentloaded",
-    )
-
-    async with AsyncWebCrawler(config=browser_config) as crawler:
+    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=30) as client:
         for category in CATEGORIES:
             page = 1
             empty_streak = 0
@@ -65,12 +97,17 @@ async def discover_topic_urls() -> list[str]:
                     url = f"{BASE_URL}{category}/index{page}.html"
 
                 try:
-                    result = await crawler.arun(url=url, config=config)
-                    if not result.success:
+                    resp = await client.get(url)
+                    if resp.status_code == 403:
+                        print(f"[community] Rate limited at page {page}, backing off 30s...")
+                        await asyncio.sleep(30)
+                        resp = await client.get(url)  # retry once
+
+                    if resp.status_code != 200:
+                        print(f"[community] Got {resp.status_code} on {url}, stopping category")
                         break
 
-                    html = result.html or ""
-                    found = _extract_topic_urls_from_html(html)
+                    found = _extract_topic_urls_from_html(resp.text)
                     new_urls = found - topic_urls
 
                     if not new_urls:
@@ -82,7 +119,8 @@ async def discover_topic_urls() -> list[str]:
                         topic_urls.update(new_urls)
 
                     page += 1
-                    await asyncio.sleep(1)  # polite delay between pages
+                    await asyncio.sleep(REQUEST_DELAY)
+
                 except Exception as e:
                     print(f"[community] Error on {url}: {e}")
                     break
@@ -101,55 +139,48 @@ async def crawl_community(urls: list[str] | None = None) -> list[dict]:
     print(f"[community] Crawling {len(urls)} topics...")
 
     results = []
-    browser_config = BrowserConfig(
-        headless=True,
-        browser_type="chromium",
-        use_managed_browser=True,
-    )
-    config = CrawlerRunConfig(
-        word_count_threshold=10,
-        excluded_tags=["nav", "footer", "header", "aside"],
-        page_timeout=30000,
-        wait_until="domcontentloaded",
-    )
+    failures = 0
 
-    async with AsyncWebCrawler(config=browser_config) as crawler:
+    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=30) as client:
         for i, url in enumerate(urls):
             try:
-                result = await crawler.arun(url=url, config=config)
-                if not result.success:
-                    print(f"[community] Failed: {url}")
-                    await asyncio.sleep(2)  # back off on failure
+                resp = await client.get(url)
+
+                if resp.status_code == 403:
+                    failures += 1
+                    if failures >= 3:
+                        print(f"[community] 3 consecutive 403s at topic {i+1}, backing off 60s...")
+                        await asyncio.sleep(60)
+                        failures = 0
+                    else:
+                        await asyncio.sleep(5)
                     continue
 
-                md_result = result.markdown
-                if hasattr(md_result, "raw_markdown"):
-                    md = md_result.raw_markdown or ""
-                else:
-                    md = str(md_result) if md_result else ""
+                if resp.status_code != 200:
+                    continue
 
-                md = clean_markdown(md)
+                failures = 0  # reset on success
 
-                title = result.metadata.get("title", "") if result.metadata else ""
-                title = re.sub(r"\s*[-|].*community.*$", "", title, flags=re.IGNORECASE).strip()
+                title = _extract_title(resp.text)
+                content = _extract_post_content(resp.text)
 
-                if md:
+                if content:
                     results.append({
                         "url": url,
                         "title": title,
-                        "markdown": md,
+                        "markdown": content,
                         "source_type": "community",
                     })
 
                 if (i + 1) % 100 == 0:
-                    print(f"[community] Progress: {i + 1}/{len(urls)}")
+                    print(f"[community] Progress: {i + 1}/{len(urls)} ({len(results)} with content)")
 
-                await asyncio.sleep(0.5)  # polite delay
+                await asyncio.sleep(REQUEST_DELAY)
 
             except Exception as e:
-                print(f"[community] Failed to crawl {url}: {e}")
+                print(f"[community] Error on {url}: {e}")
 
-    print(f"[community] Crawled {len(results)} topics successfully")
+    print(f"[community] Crawled {len(results)} topics successfully out of {len(urls)}")
     return results
 
 
