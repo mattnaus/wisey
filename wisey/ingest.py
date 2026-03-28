@@ -11,6 +11,7 @@ from wisey.crawl_community import crawl_community
 from wisey.crawl_docs import crawl_docs
 from wisey.db import clear_source, insert_chunks
 from wisey.embed import embed_texts
+from wisey.ingest_notes import ingest_notes
 
 
 def process_crawl_results(pages: list[dict]) -> list[dict]:
@@ -81,7 +82,7 @@ async def main():
     parser = argparse.ArgumentParser(description="Ingest Thinkwise content into vector DB")
     parser.add_argument(
         "source",
-        choices=["docs", "community", "all"],
+        choices=["docs", "community", "notes", "all"],
         help="Which source to ingest",
     )
     parser.add_argument(
@@ -96,6 +97,8 @@ async def main():
         total += await ingest_docs(fresh=args.fresh)
     if args.source in ("community", "all"):
         total += await ingest_community(fresh=args.fresh)
+    if args.source in ("notes", "all"):
+        total += ingest_notes(fresh=args.fresh)
 
     print(f"\nDone! Total chunks stored: {total}")
 

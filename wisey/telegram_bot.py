@@ -2,12 +2,14 @@
 
 import logging
 import os
+import re
 
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from wisey.agent import ask, retrieve
+from wisey.ingest_notes import NOTES_DIR, ingest_single_note
 
 load_dotenv()
 
@@ -85,6 +87,44 @@ async def sources(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("\n\n".join(parts))
 
 
+async def note(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Save a quick note and ingest it into the vector DB."""
+    text = " ".join(context.args) if context.args else ""
+    if not text:
+        await update.message.reply_text(
+            "Usage: /note <your note text>\n\n"
+            "Example:\n"
+            "/note Dynamic model breaks after 2025.3 upgrade. "
+            "Fix: re-run code gen after clearing cache."
+        )
+        return
+
+    await update.message.chat.send_action("typing")
+
+    try:
+        # Generate filename from timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        # Use first ~40 chars of text as slug
+        slug = re.sub(r'[^a-z0-9]+', '-', text[:40].lower()).strip('-')
+        filename = f"{timestamp}-{slug}.md"
+        filepath = NOTES_DIR / filename
+
+        # Write as markdown
+        filepath.write_text(f"## {text.split('.')[0].strip()}\nDate: {datetime.now().strftime('%B %Y')}\n\n{text}\n")
+
+        # Ingest immediately
+        count = ingest_single_note(filepath)
+
+        await update.message.reply_text(
+            f"Saved and indexed: `{filename}` ({count} chunks)",
+            parse_mode="Markdown",
+        )
+    except Exception as e:
+        logger.error(f"Error saving note: {e}")
+        await update.message.reply_text("Sorry, failed to save that note. Please try again.")
+
+
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -94,6 +134,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("sources", sources))
+    app.add_handler(CommandHandler("note", note))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_question))
 
     logger.info("Wisey Telegram bot starting...")
