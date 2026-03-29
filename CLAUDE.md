@@ -1,6 +1,6 @@
 # Thinkwise Knowledge Agent
 
-RAG-based agent that answers Thinkwise platform questions by searching a local vector database built from docs, community posts, release notes, and personal notes.
+RAG-based agent that answers Thinkwise platform questions by searching a local vector database built from docs, community posts, release notes, guides, and personal notes.
 
 ## Stack
 
@@ -20,6 +20,7 @@ DATA SOURCES
   Community Forum (community.thinkwisesoftware.com)
   Release Notes (included in docs blog)
   Personal Notes (notes/ folder)
+  Guides (guides/ folder)
         |
 INGESTION PIPELINE
   Crawler (crawl4ai for docs, httpx for community)
@@ -50,7 +51,7 @@ CREATE TABLE chunks (
     content     TEXT NOT NULL,
     embedding   vector(768),
     source_url  TEXT,
-    source_type TEXT,   -- 'docs' | 'community' | 'release_notes' | 'notes'
+    source_type TEXT,   -- 'docs' | 'community' | 'release_notes' | 'notes' | 'guides'
     title       TEXT,
     crawled_at  TIMESTAMPTZ DEFAULT now()
 );
@@ -68,8 +69,8 @@ WITH (lists = 100);
 4. **Basic agent** — done (embed question -> retrieve top-k -> Claude Sonnet -> cited answer)
 5. **MCP server** — done (search_thinkwise + search_thinkwise_docs)
 6. **Telegram bot** — done (text questions, /sources, /note)
-7. **Notes pipeline** — done (file watcher, Telegram /note, CLI)
-8. **Cron + launchd** — done (monthly docs, weekly community pending, services auto-start)
+7. **Notes + guides pipeline** — done (file watcher, Telegram /note, CLI)
+8. **Cron + launchd** — done (monthly docs, weekly community, services auto-start)
 9. **Web UI** — planned
 
 ## Current Status
@@ -85,14 +86,15 @@ WITH (lists = 100);
 - [x] MCP server running
 - [x] Telegram bot running (launchd: com.wisey.telegram-bot)
 - [x] Notes pipeline (file watcher, /note command, CLI ingest)
-- [x] Notes watcher running (launchd: com.wisey.watch-notes)
+- [x] Guides pipeline (file watcher, CLI ingest)
+- [x] Notes + guides watcher running (launchd: com.wisey.watch-notes)
 - [x] Cron: docs monthly (1st of month, 3am)
 - [x] Cron: community weekly (Sundays 3am)
 - [ ] Web UI
 
-## Personal Notes Strategy
+## Notes and Guides
 
-Flat `.md` files in `notes/` folder. Three ways to add:
+**Notes** — quick problem/solution snippets in `notes/`:
 1. Drop a file in `notes/` — file watcher auto-ingests
 2. Telegram `/note <text>` — saves file + ingests immediately
 3. CLI: `uv run python -m wisey.ingest notes`
@@ -105,6 +107,10 @@ Problem: [what broke or was unclear]
 Fix: [what actually worked]
 Why: [the reason, if known]
 ```
+
+**Guides** — comprehensive reference documents in `guides/`:
+1. Drop a `.md` file in `guides/` — file watcher auto-ingests
+2. CLI: `uv run python -m wisey.ingest guides`
 
 ## Key Decisions
 
@@ -133,7 +139,7 @@ Why: [the reason, if known]
 | PostgreSQL | brew services | Yes | Homebrew |
 | Ollama | brew services | Yes | Homebrew |
 | Telegram bot | launchd | Yes + auto-restart | ~/wisey-telegram.log |
-| Notes watcher | launchd | Yes + auto-restart | ~/wisey-watcher.log |
+| Notes + guides watcher | launchd | Yes + auto-restart | ~/wisey-watcher.log |
 
 ## SQL Migrations
 

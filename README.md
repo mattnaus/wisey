@@ -1,6 +1,6 @@
 # Wisey — Thinkwise Knowledge Agent
 
-RAG-based agent that answers Thinkwise platform questions by searching a local vector database built from docs, community posts, release notes, and personal notes.
+RAG-based agent that answers Thinkwise platform questions by searching a local vector database built from docs, community posts, release notes, guides, and personal notes.
 
 ## Stack
 
@@ -20,6 +20,7 @@ DATA SOURCES                      RUNTIME
   Community Forum        -->        Top-K retriever (k=8, cosine)
   Release Notes                     Claude Sonnet (answer + citations)
   Personal Notes (notes/)
+  Guides (guides/)
         |                          INTERFACES
         v                            MCP server -> Claude Code tool
   INGESTION PIPELINE                 Telegram bot (Wisey)
@@ -40,6 +41,7 @@ DATA SOURCES                      RUNTIME
 | Community Forum | community.thinkwisesoftware.com | Paginate categories -> crawl topics via httpx | ~3,300 |
 | Release Notes | (included in docs blog) | -- | ~24 |
 | Personal Notes | `notes/` folder | File watcher + Telegram /note | varies |
+| Guides | `guides/` folder | File watcher | varies |
 
 ## Prerequisites
 
@@ -84,6 +86,9 @@ uv run python -m wisey.ingest community
 # Ingest personal notes from notes/ folder
 uv run python -m wisey.ingest notes
 
+# Ingest guides from guides/ folder
+uv run python -m wisey.ingest guides
+
 # All sources at once
 uv run python -m wisey.ingest all
 
@@ -96,15 +101,18 @@ uv run python -m wisey.ingest docs --fresh
 Cron jobs handle automatic re-ingestion:
 - **Docs**: 1st of every month at 3am (`scripts/ingest-docs.sh`)
 - **Community**: Weekly on Sundays at 3am (`scripts/ingest-community.sh`)
-- **Notes**: Auto-ingested via file watcher (launchd service)
+- **Notes + Guides**: Auto-ingested via file watcher (launchd service)
 
-## Notes
+## Notes and Guides
 
-Three ways to add notes to the knowledge base:
-
+**Notes** -- quick problem/solution snippets:
 1. **Drop a `.md` file in `notes/`** -- the file watcher auto-ingests it
 2. **Telegram `/note`** -- e.g. `/note Dynamic model breaks after 2025.3. Fix: re-run code gen.`
 3. **CLI** -- `uv run python -m wisey.ingest notes --fresh`
+
+**Guides** -- comprehensive reference documents:
+1. **Drop a `.md` file in `guides/`** -- the file watcher auto-ingests it
+2. **CLI** -- `uv run python -m wisey.ingest guides --fresh`
 
 ## Query
 
@@ -174,10 +182,10 @@ wisey/
     db.py                   # Postgres/pgvector helpers
     embed.py                # Ollama embedding client
     ingest.py               # Main pipeline CLI: crawl -> chunk -> embed -> store
-    ingest_notes.py         # Notes ingestion + single-file ingest
+    ingest_notes.py         # Notes + guides ingestion + single-file ingest
     mcp_server.py           # MCP server for Claude Code
     telegram_bot.py         # Telegram bot
-    watch_notes.py          # File watcher for notes/ folder
+    watch_notes.py          # File watcher for notes/ and guides/
   scripts/                  # Cron scripts
     ingest-docs.sh          # Monthly docs re-ingestion
     ingest-community.sh     # Weekly community re-ingestion
@@ -185,6 +193,7 @@ wisey/
     001_init.sql
     002_vector_768.sql
   notes/                    # Personal markdown notes
+  guides/                   # Comprehensive reference guides
   .env.example              # Required environment variables
   pyproject.toml            # Python project config
   CLAUDE.md                 # Agent instructions
@@ -202,6 +211,7 @@ wisey/
 - [x] MCP server
 - [x] Telegram bot
 - [x] Notes pipeline (file watcher + Telegram /note + CLI)
-- [x] Cron jobs (docs monthly, community weekly pending)
+- [x] Guides pipeline (file watcher + CLI)
+- [x] Cron jobs (docs monthly, community weekly)
 - [x] launchd services (auto-start on boot)
 - [ ] Web UI
